@@ -30,9 +30,9 @@ func NewServer(addr string) *TCPServer {
 	}
 }
 
-func HandleConnection(c net.Conn) {
+func HandleConnection(c *Conn) {
 	for {
-		netData, err := bufio.NewReader(c).ReadString('\n')
+		netData, err := bufio.NewReader(c.C).ReadString('\n')
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -42,10 +42,10 @@ func HandleConnection(c net.Conn) {
 		if temp == "STOP" {
 			break
 		}
-		fmt.Println(temp)
+		fmt.Println(c.ID + "> " + temp)
 
 	}
-	_ = c.Close()
+	_ = c.C.Close()
 }
 
 func (h *Hub) Destroy(conn *Conn) error {

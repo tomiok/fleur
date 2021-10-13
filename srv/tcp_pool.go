@@ -39,7 +39,7 @@ var (
 // When Get()/GetWithTimeout called, if channel still has connection it will get connection from channel.
 // Otherwise, pool check number of connection which had already created as the number are less than maxConn,
 // it uses connCreator function to create new connection.
-func NewPool(minConn, maxConn int, connCreator func() (net.Conn, error)) (*pool, error) {
+func NewPool(minConn, maxConn int) (*pool, error) {
 	if minConn > maxConn || minConn < 0 || maxConn <= 0 {
 		return nil, errors.New("number of connection bound error")
 	}
@@ -47,7 +47,6 @@ func NewPool(minConn, maxConn int, connCreator func() (net.Conn, error)) (*pool,
 	pool := &pool{}
 	pool.minConnNum = minConn
 	pool.maxConnNum = maxConn
-	pool.connCreator = connCreator
 	pool.connections = make(chan *Conn, maxConn)
 	pool.closed = false
 	pool.totalConnNum = 0
