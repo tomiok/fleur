@@ -2,8 +2,10 @@ package srv
 
 import (
 	"bufio"
+	"encoding/binary"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"strings"
 )
@@ -13,8 +15,8 @@ type Hub struct {
 }
 
 type TCPServer struct {
-	addr     string
-	listener net.Listener
+	addr string
+	L    net.Listener
 }
 
 func NewServer(addr string) *TCPServer {
@@ -23,12 +25,12 @@ func NewServer(addr string) *TCPServer {
 		panic(err.Error())
 	}
 	return &TCPServer{
-		addr:     addr,
-		listener: l,
+		addr: addr,
+		L:    l,
 	}
 }
 
-func (s *TCPServer) HandleConnection(c net.Conn) {
+func HandleConnection(c net.Conn) {
 	for {
 		netData, err := bufio.NewReader(c).ReadString('\n')
 		if err != nil {
@@ -47,6 +49,7 @@ func (s *TCPServer) HandleConnection(c net.Conn) {
 }
 
 func (h *Hub) Destroy(conn *Conn) error {
+
 	if h.pool == nil {
 		return errors.New("connection not belong any connection pool")
 	}
@@ -64,4 +67,30 @@ func (h *Hub) Close(conn *Conn) error {
 		return errors.New("connection not belong any connection pool")
 	}
 	return h.pool.Put(conn)
+}
+
+func Write(s net.Conn, data []byte) error {
+	buf := make([]byte, 4+len(data))
+	binary.BigEndian.PutUint32(buf[:4], uint32(len(data)))
+	copy(buf[4:], data)
+	_, err := s.Write(buf)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func Read(s net.Conn) ([]byte, error) {
+	header := make([]byte, 4)
+	_, err := io.ReadFull(s, header)
+	if err != nil {
+		return nil, err
+	}
+	dataLen := binary.BigEndian.Uint32(header)
+	data := make([]byte, dataLen)
+	_, err = io.ReadFull(s, data)
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
 }
