@@ -43,11 +43,14 @@ func (server *ChatServer) HandleConnection(c *Conn) {
 				ln := scanner.Text()
 				s := strings.Split(ln, " ")
 				//TODO handle when a user repeat the nickname
+				//TODO handle bad messages
 				user := server.ActiveConnections[s[0]]
-				io.WriteString(user.Connection, ln)
+				io.WriteString(user.Connection, ln + "______")
 			}
 		}()
 
+		// wait for it
+		for range c.Output {}
 	}
 }
 
