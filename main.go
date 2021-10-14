@@ -5,17 +5,23 @@ import (
 	"github.com/ohchat-io/fleur/srv"
 )
 
-const minCount = 3
-
 func main() {
 	s := srv.NewServer("5566")
-
+	cs := srv.ChatServer{
+		ActiveConnections: make(map[string]*srv.Conn),
+		TCPSrv:            s,
+		Join:              make(chan *srv.Conn),
+		Leave:             make(chan *srv.Conn),
+		Input:             nil,
+		Broadcast:         nil,
+	}
+	go cs.Run()
 	for {
-		conn, _ := s.L.Accept()
+		conn, _ := s.Listener.Accept()
 		c := &srv.Conn{
-			ID: uuid.NewString(),
-			C:  conn,
+			ID:         uuid.NewString(),
+			Connection: conn,
 		}
-		go srv.HandleConnection(c)
+		go cs.HandleConnection(c)
 	}
 }

@@ -2,17 +2,15 @@ package srv
 
 import (
 	"bufio"
-	"fmt"
+	"github.com/rs/zerolog/log"
+	"io"
 	"net"
 	"strings"
 )
 
-type Hub struct {
-}
-
 type TCPServer struct {
-	addr string
-	L    net.Listener
+	addr     string
+	Listener net.Listener
 }
 
 func NewServer(addr string) *TCPServer {
@@ -21,26 +19,41 @@ func NewServer(addr string) *TCPServer {
 		panic(err.Error())
 	}
 	return &TCPServer{
-		addr: addr,
-		L:    l,
+		addr:     addr,
+		Listener: l,
 	}
 }
 
-func HandleConnection(c *Conn) {
+func (server *ChatServer) HandleConnection(c *Conn) {
+	defer func() {
+		//TODO handle this by deleting one connection in the server as well
+		_ = c.Connection.Close()
+	}()
 	for {
-		msg, err := bufio.NewReader(c.C).ReadString('\n')
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
+		io.WriteString(c.Connection, "Enter your nick:")
 
-		temp := strings.TrimSpace(msg)
+		scanner := bufio.NewScanner(c.Connection)
+		scanner.Scan()
+		c.Nick = scanner.Text()
+		server.Join <- c
 
-		if temp == "STOP" {
-			break
-		}
-		fmt.Println(c.ID + "> " + temp)
+		// Read and write the message. Lookup the receiver.
+		go func() {
+			for scanner.Scan() {
+				ln := scanner.Text()
+				s := strings.Split(ln, " ")
+				//TODO handle when a user repeat the nickname
+				user := server.ActiveConnections[s[0]]
+				io.WriteString(user.Connection, ln)
+			}
+		}()
 
 	}
-	_ = c.C.Close()
+}
+
+func Write(w io.Writer, msg string) {
+	_, err := io.WriteString(w, msg)
+	if err != nil {
+		log.Warn().Msgf("cannot write message %s", err.Error())
+	}
 }
