@@ -2,12 +2,14 @@ package main
 
 import (
 	"github.com/google/uuid"
+	"github.com/ohchat-io/fleur/config"
 	"github.com/ohchat-io/fleur/srv"
 )
 //TODO fix broadcasting, do a correct one
 //TODO add init functions for TCP and chat servers
 func main() {
-	s := srv.NewServer("5566")
+	conf := config.Bind()
+	s := srv.NewServer(conf.Port)
 	cs := srv.ChatServer{
 		ActiveConnections: make(map[string]*srv.Conn),
 		TCPSrv:            s,
