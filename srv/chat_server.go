@@ -1,6 +1,7 @@
 package srv
 
 import (
+	"fmt"
 	"net"
 )
 
@@ -10,7 +11,6 @@ type ChatServer struct {
 	Join              chan *Conn
 	Leave             chan *Conn
 	Input             chan Message
-	Broadcast         chan Message
 }
 
 type Message struct {
@@ -40,21 +40,16 @@ func (server *ChatServer) Run() {
 					Text:     u.Nick + " joined",
 				}
 			}()
-
 		case msg := <-server.Input:
-			var conn *Conn
 			var r = msg.Receiver
 			switch r {
 			case "BROADCAST":
+				fmt.Println("broadcast")
 			default:
-				conn = server.ActiveConnections[r]
+
 			}
 
-			select {
-			case server.Broadcast <- msg:
-			case conn.Wait <- struct{}{}:
-			default:
-			}
+
 		}
 	}
 }

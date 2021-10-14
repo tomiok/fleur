@@ -12,8 +12,7 @@ func main() {
 		TCPSrv:            s,
 		Join:              make(chan *srv.Conn),
 		Leave:             make(chan *srv.Conn),
-		Input:             nil,
-		Broadcast:         nil,
+		Input:             make(chan srv.Message),
 	}
 	go cs.Run()
 	for {
