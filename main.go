@@ -6,7 +6,6 @@ import (
 )
 //TODO fix broadcasting, do a correct one
 //TODO add init functions for TCP and chat servers
-//TODO handle better the writestring function
 func main() {
 	s := srv.NewServer("5566")
 	cs := srv.ChatServer{

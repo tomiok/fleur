@@ -30,7 +30,7 @@ func (server *ChatServer) HandleConnection(c *Conn) {
 		_ = c.Connection.Close()
 	}()
 	for {
-		io.WriteString(c.Connection, "Enter your nick:")
+		Write(c.Connection, "Enter your nick:")
 
 		scanner := bufio.NewScanner(c.Connection)
 		scanner.Scan()
@@ -46,7 +46,7 @@ func (server *ChatServer) HandleConnection(c *Conn) {
 				//TODO handle bad messages
 				//TODO format messages correctly
 				user := server.ActiveConnections[s[0]]
-				io.WriteString(user.Connection, ln)
+				Write(user.Connection, ln)
 			}
 		}()
 
