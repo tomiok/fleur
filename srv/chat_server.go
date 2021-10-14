@@ -22,7 +22,7 @@ type Conn struct {
 	ID         string
 	Nick       string
 	Connection net.Conn
-	Output     chan Message
+	Wait       chan struct{}
 }
 
 func (server *ChatServer) AddUser(c *Conn) {
@@ -52,7 +52,7 @@ func (server *ChatServer) Run() {
 
 			select {
 			case server.Broadcast <- msg:
-			case conn.Output <- msg:
+			case conn.Wait <- struct{}{}:
 			default:
 			}
 		}
