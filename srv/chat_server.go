@@ -29,10 +29,13 @@ type Message struct {
 }
 
 type Conn struct {
-	ID         string
 	Nick       string
 	Connection net.Conn
 	Wait       chan struct{}
+}
+
+func NewConn(connection net.Conn) *Conn {
+	return &Conn{Connection: connection}
 }
 
 func NewChatServer(port string) *ChatServer {
@@ -49,19 +52,17 @@ func (server *ChatServer) AddUser(c *Conn) {
 	server.ActiveConnections[c.Nick] = c
 }
 
-// TODO add left channel message
-
 // Run starts the server
 func (server *ChatServer) Run() {
 	for {
 		select {
-		case u := <-server.Join:
-			server.AddUser(u)
+		case conn := <-server.Join:
+			server.AddUser(conn)
 			go func() {
 				server.Input <- Message{
 					Type:   broadcast,
-					Sender: u.Nick,
-					Text:   fmt.Sprintf("%s joined Fleur channel", u.Nick),
+					Sender: conn.Nick,
+					Text:   fmt.Sprintf("%s joined Fleur channel", conn.Nick),
 				}
 			}()
 		case msg := <-server.Input:
@@ -73,18 +74,30 @@ func (server *ChatServer) Run() {
 						Write(v.Connection, msg.Text)
 					}
 				}
-			default:
 			}
+		case conn := <-server.Leave:
+			go func() {
+				delete(server.ActiveConnections, conn.Nick)
+				server.Input <- Message{
+					Type:   broadcast,
+					Sender: conn.Nick,
+					Text:   fmt.Sprintf("%s left Fleur channel", conn.Nick),
+				}
+			}()
+			func() {
+				err := conn.Connection.Close()
+				if err != nil {
+					log.Warn().Msgf("cannot clone connection %s", err.Error())
+				}
+			}()
 		}
 	}
 }
 
 func (server *ChatServer) HandleConnection(c *Conn) {
-	defer func() {
-		//TODO handle this by deleting one connection in the server as well
-		_ = c.Connection.Close()
-	}()
+
 	for {
+
 		Write(c.Connection, "Enter your nick: ")
 
 		scanner := bufio.NewScanner(c.Connection)
@@ -108,6 +121,7 @@ func (server *ChatServer) HandleConnection(c *Conn) {
 		// wait for it
 		<-c.Wait
 	}
+
 }
 
 func Write(w io.Writer, msg string) {
