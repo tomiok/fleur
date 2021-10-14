@@ -7,21 +7,16 @@ import (
 )
 
 //TODO fix broadcasting, do a correct one
-//TODO add init functions for TCP and chat servers
 func main() {
 	conf := config.Bind()
 	conf.PrintConfigs()
-	s := srv.NewServer(conf.Port)
-	cs := srv.ChatServer{
-		ActiveConnections: make(map[string]*srv.Conn),
-		TCPSrv:            s,
-		Join:              make(chan *srv.Conn),
-		Leave:             make(chan *srv.Conn),
-		Input:             make(chan srv.Message),
-	}
+
+	cs := srv.NewChatServer(conf.Port)
+
 	go cs.Run()
+
 	for {
-		conn, _ := s.Listener.Accept()
+		conn, _ := cs.TCPSrv.Listener.Accept()
 		c := &srv.Conn{
 			ID:         uuid.NewString(),
 			Connection: conn,
