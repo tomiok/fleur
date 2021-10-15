@@ -95,12 +95,15 @@ func (server *ChatServer) Run() {
 
 func (server *ChatServer) HandleConnection(c *Conn) {
 	for {
-		//TODO handle when a user repeat the nickname
-		WritePrompt(c.Connection, "Enter your nick: ")
-
 		scanner := bufio.NewScanner(c.Connection)
-		scanner.Scan()
-		c.Nick = scanner.Text()
+		for {
+			WritePrompt(c.Connection, "Enter your nick: ")
+			scanner.Scan()
+			c.Nick = scanner.Text()
+			if !server.IsValidNickname(c.Nick) {
+				break
+			}
+		}
 
 		// Emit a new join event.
 		server.Join <- c

@@ -33,3 +33,8 @@ func (server *ChatServer) MessageParser(sender, message string) (Message, error)
 		Text:     text,
 	}, nil
 }
+
+func (server *ChatServer) IsValidNickname(nick string) bool {
+	_, b := server.ActiveConnections[nick]
+	return b
+}
