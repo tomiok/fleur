@@ -35,7 +35,10 @@ type Conn struct {
 }
 
 func NewConn(connection net.Conn) *Conn {
-	return &Conn{Connection: connection}
+	return &Conn{
+		Connection: connection,
+		Wait:       make(chan struct{}),
+	}
 }
 
 func NewChatServer(port string) *ChatServer {
@@ -95,9 +98,7 @@ func (server *ChatServer) Run() {
 }
 
 func (server *ChatServer) HandleConnection(c *Conn) {
-
 	for {
-
 		Write(c.Connection, "Enter your nick: ")
 
 		scanner := bufio.NewScanner(c.Connection)
@@ -116,6 +117,7 @@ func (server *ChatServer) HandleConnection(c *Conn) {
 				user := server.ActiveConnections[s[0]]
 				Write(user.Connection, ln)
 			}
+			server.CloseConnection(c)
 		}()
 
 		// wait for it
