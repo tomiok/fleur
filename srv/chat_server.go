@@ -6,12 +6,12 @@ import (
 	"github.com/rs/zerolog/log"
 	"io"
 	"net"
-	"strings"
 )
 
 const (
 	broadcast = "BROADCAST"
 )
+
 // TODO add stats for connections and messages
 type ChatServer struct {
 	ActiveConnections map[string]*Conn
@@ -85,7 +85,7 @@ func (server *ChatServer) Run() {
 			case broadcast:
 				for k, v := range server.ActiveConnections {
 					if k != msg.Sender {
-						WriteMessage(v.Connection, msg.Text)
+						WriteMessage(v.Connection, "", msg.Text)
 					}
 				}
 			}
@@ -95,6 +95,7 @@ func (server *ChatServer) Run() {
 
 func (server *ChatServer) HandleConnection(c *Conn) {
 	for {
+		//TODO handle when a user repeat the nickname
 		WritePrompt(c.Connection, "Enter your nick: ")
 
 		scanner := bufio.NewScanner(c.Connection)
@@ -107,13 +108,13 @@ func (server *ChatServer) HandleConnection(c *Conn) {
 		// Read and write the message. Lookup the receiver.
 		go func() {
 			for scanner.Scan() {
-				ln := scanner.Text()
-				s := strings.Split(ln, " ")
-				//TODO handle when a user repeat the nickname
-				//TODO handle bad messages
-				//TODO format messages correctly
-				user := server.ActiveConnections[s[0]]
-				WriteMessage(user.Connection, ln)
+				text := scanner.Text()
+				msg, err := server.MessageParser(c.Nick, text)
+				if err != nil {
+					continue
+				}
+				conn := server.ActiveConnections[msg.Receiver]
+				WriteMessage(conn.Connection, msg.Sender, msg.Text)
 			}
 			server.CloseConnection(c)
 		}()
@@ -121,11 +122,10 @@ func (server *ChatServer) HandleConnection(c *Conn) {
 		// Wait for it.
 		<-c.Wait
 	}
-
 }
 
-func WriteMessage(w io.Writer, msg string) {
-	write(w, msg+"\n")
+func WriteMessage(w io.Writer, sender, msg string) {
+	write(w, sender+"> "+msg+"\n")
 }
 
 func WritePrompt(w io.Writer, msg string) {

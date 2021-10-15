@@ -1,6 +1,10 @@
 package srv
 
-import "github.com/rs/zerolog/log"
+import (
+	"errors"
+	"github.com/rs/zerolog/log"
+	"strings"
+)
 
 func (server *ChatServer) CloseConnection(c *Conn) {
 	delete(server.ActiveConnections, c.Nick)
@@ -11,4 +15,21 @@ func (server *ChatServer) CloseConnection(c *Conn) {
 	}
 
 	server.Leave <- c
+}
+
+func (server *ChatServer) MessageParser(sender, message string) (Message, error) {
+	if message == "" {
+		return Message{}, errors.New("empty message")
+	}
+
+	values := strings.Split(message, " ")
+
+	receiver := values[0]
+	text := strings.Join(values[1:], " ")
+
+	return Message{
+		Sender:   sender,
+		Receiver: receiver,
+		Text:     text,
+	}, nil
 }
