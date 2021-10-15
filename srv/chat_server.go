@@ -12,7 +12,7 @@ import (
 const (
 	broadcast = "BROADCAST"
 )
-
+// TODO add stats for connections and messages
 type ChatServer struct {
 	ActiveConnections map[string]*Conn
 	TCPSrv            *TCPServer
@@ -55,10 +55,12 @@ func (server *ChatServer) AddUser(c *Conn) {
 	server.ActiveConnections[c.Nick] = c
 }
 
-// Run starts the server
+// Run starts the server, keep all the channels running and listening for new events.
+// Join, Leave and Input, those are the main events in the chat server.
 func (server *ChatServer) Run() {
 	for {
 		select {
+		// When a user joins the server, send a message to everyone.
 		case conn := <-server.Join:
 			server.AddUser(conn)
 			go func() {
@@ -68,42 +70,38 @@ func (server *ChatServer) Run() {
 					Text:   fmt.Sprintf("%s joined Fleur channel", conn.Nick),
 				}
 			}()
-		case msg := <-server.Input:
-			var t = msg.Type
-			switch t {
-			case broadcast:
-				for k, v := range server.ActiveConnections {
-					if k != msg.Sender {
-						Write(v.Connection, msg.Text)
-					}
-				}
-			}
+		// When a user leaves the server, send a message to everyone.
 		case conn := <-server.Leave:
 			go func() {
-				delete(server.ActiveConnections, conn.Nick)
 				server.Input <- Message{
 					Type:   broadcast,
 					Sender: conn.Nick,
 					Text:   fmt.Sprintf("%s left Fleur channel", conn.Nick),
 				}
 			}()
-			func() {
-				err := conn.Connection.Close()
-				if err != nil {
-					log.Warn().Msgf("cannot clone connection %s", err.Error())
+		case msg := <-server.Input:
+			var t = msg.Type
+			switch t {
+			case broadcast:
+				for k, v := range server.ActiveConnections {
+					if k != msg.Sender {
+						WriteMessage(v.Connection, msg.Text)
+					}
 				}
-			}()
+			}
 		}
 	}
 }
 
 func (server *ChatServer) HandleConnection(c *Conn) {
 	for {
-		Write(c.Connection, "Enter your nick: ")
+		WritePrompt(c.Connection, "Enter your nick: ")
 
 		scanner := bufio.NewScanner(c.Connection)
 		scanner.Scan()
 		c.Nick = scanner.Text()
+
+		// Emit a new join event.
 		server.Join <- c
 
 		// Read and write the message. Lookup the receiver.
@@ -115,19 +113,27 @@ func (server *ChatServer) HandleConnection(c *Conn) {
 				//TODO handle bad messages
 				//TODO format messages correctly
 				user := server.ActiveConnections[s[0]]
-				Write(user.Connection, ln)
+				WriteMessage(user.Connection, ln)
 			}
 			server.CloseConnection(c)
 		}()
 
-		// wait for it
+		// Wait for it.
 		<-c.Wait
 	}
 
 }
 
-func Write(w io.Writer, msg string) {
-	_, err := io.WriteString(w, fmt.Sprintf("%s \n", msg))
+func WriteMessage(w io.Writer, msg string) {
+	write(w, msg+"\n")
+}
+
+func WritePrompt(w io.Writer, msg string) {
+	write(w, msg)
+}
+
+func write(w io.Writer, msg string) {
+	_, err := io.WriteString(w, fmt.Sprintf("%s", msg))
 	if err != nil {
 		log.Warn().Msgf("cannot write message %s", err.Error())
 	}
