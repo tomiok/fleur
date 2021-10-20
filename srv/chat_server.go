@@ -22,10 +22,11 @@ type ChatServer struct {
 }
 
 type Message struct {
-	Type     string
-	Sender   string
-	Receiver string
-	Text     string
+	Type        string
+	Sender      string
+	Receiver    string
+	Text        string
+	Connections []string
 }
 
 type Conn struct {
@@ -88,6 +89,9 @@ func (server *ChatServer) Run() {
 						WriteMessage(v.Connection, "", msg.Text)
 					}
 				}
+			case messageTypeDirect:
+				receiver := server.ActiveConnections[msg.Receiver]
+				WriteMessage(receiver.Connection, msg.Sender, msg.Text)
 			}
 		}
 	}
@@ -103,6 +107,7 @@ func (server *ChatServer) HandleConnection(c *Conn) {
 			if !server.IsValidNickname(c.Nick) {
 				break
 			}
+			// TODO send all the information about the server to the current connection
 		}
 
 		// Emit a new join event.
@@ -116,8 +121,9 @@ func (server *ChatServer) HandleConnection(c *Conn) {
 				if err != nil {
 					continue
 				}
-				conn := server.ActiveConnections[msg.Receiver]
-				WriteMessage(conn.Connection, msg.Sender, msg.Text)
+
+				// write to receiver(s)
+				server.Input <- msg
 			}
 			server.CloseConnection(c)
 		}()
