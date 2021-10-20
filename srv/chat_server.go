@@ -8,10 +8,7 @@ import (
 	"net"
 )
 
-const (
-	broadcast = "BROADCAST"
-)
-
+// ChatServer is the main structure that holds all the necessary information for the tcp and web server
 // TODO add stats for connections and messages
 type ChatServer struct {
 	ActiveConnections map[string]*Conn
@@ -66,7 +63,7 @@ func (server *ChatServer) Run() {
 			server.AddUser(conn)
 			go func() {
 				server.Input <- Message{
-					Type:   broadcast,
+					Type:   msgTypeBroadcast,
 					Sender: conn.Nick,
 					Text:   fmt.Sprintf("%s joined Fleur channel", conn.Nick),
 				}
@@ -75,7 +72,7 @@ func (server *ChatServer) Run() {
 		case conn := <-server.Leave:
 			go func() {
 				server.Input <- Message{
-					Type:   broadcast,
+					Type:   msgTypeBroadcast,
 					Sender: conn.Nick,
 					Text:   fmt.Sprintf("%s left Fleur channel", conn.Nick),
 				}
@@ -83,15 +80,19 @@ func (server *ChatServer) Run() {
 		case msg := <-server.Input:
 			var t = msg.Type
 			switch t {
-			case broadcast:
+			case msgTypeBroadcast:
 				for k, v := range server.ActiveConnections {
 					if k != msg.Sender {
 						WriteMessage(v.Connection, "", msg.Text)
 					}
 				}
-			case messageTypeDirect:
+			case msgTypeDirect:
 				receiver := server.ActiveConnections[msg.Receiver]
-				WriteMessage(receiver.Connection, msg.Sender, msg.Text)
+				// prevent send message to a non-connected user
+				if receiver != nil {
+					WriteMessage(receiver.Connection, msg.Sender, msg.Text)
+				}
+
 			}
 		}
 	}
@@ -117,7 +118,7 @@ func (server *ChatServer) HandleConnection(c *Conn) {
 		go func() {
 			for scanner.Scan() {
 				text := scanner.Text()
-				msg, err := server.MessageParser(c.Nick, text)
+				msg, err := parse(c.Nick, text, directMsgParser)
 				if err != nil {
 					continue
 				}
@@ -125,6 +126,7 @@ func (server *ChatServer) HandleConnection(c *Conn) {
 				// write to receiver(s)
 				server.Input <- msg
 			}
+			// tidy up
 			server.CloseConnection(c)
 		}()
 

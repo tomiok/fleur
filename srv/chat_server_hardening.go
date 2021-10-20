@@ -6,10 +6,6 @@ import (
 	"strings"
 )
 
-const (
-	messageTypeDirect = "message"
-)
-
 func (server *ChatServer) CloseConnection(c *Conn) {
 	delete(server.ActiveConnections, c.Nick)
 	err := c.Connection.Close()
@@ -21,7 +17,11 @@ func (server *ChatServer) CloseConnection(c *Conn) {
 	server.Leave <- c
 }
 
-func (server *ChatServer) MessageParser(sender, message string) (Message, error) {
+func parse(sender, msg string, parser func(s, m string) (Message, error)) (Message, error) {
+	return parser(sender, msg)
+}
+
+func directMsgParser(sender, message string) (Message, error) {
 	if message == "" {
 		return Message{}, errors.New("empty message")
 	}
@@ -35,7 +35,7 @@ func (server *ChatServer) MessageParser(sender, message string) (Message, error)
 		Sender:   sender,
 		Receiver: receiver,
 		Text:     text,
-		Type:     messageTypeDirect,
+		Type:     msgTypeDirect,
 	}, nil
 }
 
@@ -55,6 +55,6 @@ func (server *ChatServer) ShowConnections() []string {
 	return connections
 }
 
-func messageFormat(connections []string) Message {
-	return Message{Connections: connections}
+func (server *ChatServer) GetConnection(nick string) *Conn{
+	return server.ActiveConnections[nick]
 }

@@ -5,6 +5,11 @@ import (
 	"net"
 )
 
+const (
+	msgTypeDirect    = "MESSAGE_DIRECT"
+	msgTypeBroadcast = "BROADCAST"
+)
+
 type TCPServer struct {
 	addr     string
 	Listener net.Listener
