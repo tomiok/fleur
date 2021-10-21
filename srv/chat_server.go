@@ -63,20 +63,20 @@ func (server *ChatServer) Run() {
 			server.AddUser(conn)
 			go func() {
 				server.Input <- Message{
-					Type:   msgTypeBroadcast,
-					Sender: systemSender,
+					Type:       msgTypeBroadcast,
+					Sender:     systemSender,
 					ExcludeOne: conn.Nick,
-					Body:   fmt.Sprintf("%s joined Fleur channel", conn.Nick),
+					Body:       fmt.Sprintf("%s joined Fleur channel", conn.Nick),
 				}
 			}()
 		// When a user leaves the server, send a message to everyone.
 		case conn := <-server.Leave:
 			go func() {
 				server.Input <- Message{
-					Type:   msgTypeBroadcast,
-					Sender: systemSender,
+					Type:       msgTypeBroadcast,
+					Sender:     systemSender,
 					ExcludeOne: conn.Nick,
-					Body:   fmt.Sprintf("%s left Fleur channel", conn.Nick),
+					Body:       fmt.Sprintf("%s left Fleur channel", conn.Nick),
 				}
 			}()
 		case msg := <-server.Input:
@@ -115,17 +115,18 @@ func (server *ChatServer) HandleConnection(c *Conn) {
 			if !server.IsValidNickname(nick) {
 				break
 			}
-			server.Input <- Message{
-				Type:        msgTypeSelf,
-				Sender:      systemSender,
-				Receiver:    nick,
-				Body:        "welcome " + nick,
-				Connections: server.GetConnections(),
-			}
 		}
 
 		// Emit a new join event.
 		server.Join <- c
+
+		server.Input <- Message{
+			Type:        msgTypeSelf,
+			Sender:      systemSender,
+			Receiver:    c.Nick,
+			Body:        "welcome " + c.Nick,
+			Connections: server.GetConnections(),
+		}
 
 		// Read and write the message. Lookup the receiver.
 		go func() {
