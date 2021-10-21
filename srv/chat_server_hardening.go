@@ -34,7 +34,7 @@ func directMsgParser(sender, message string) (Message, error) {
 	return Message{
 		Sender:   sender,
 		Receiver: receiver,
-		Text:     text,
+		Body:     text,
 		Type:     msgTypeDirect,
 	}, nil
 }
@@ -44,7 +44,7 @@ func (server *ChatServer) IsValidNickname(nick string) bool {
 	return b
 }
 
-func (server *ChatServer) ShowConnections() []string {
+func (server *ChatServer) GetConnections() []string {
 	actives := server.ActiveConnections
 	connections := make([]string, len(actives))
 

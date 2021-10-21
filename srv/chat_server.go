@@ -2,10 +2,10 @@ package srv
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"github.com/rs/zerolog/log"
 	"io"
-	"net"
 )
 
 // ChatServer is the main structure that holds all the necessary information for the tcp and web server
@@ -19,24 +19,24 @@ type ChatServer struct {
 }
 
 type Message struct {
-	Type        string
-	Sender      string
-	Receiver    string
-	Text        string
-	Connections []string
+	// message properties
+	Type       string `json:"type"`     // define which type of message is, and who is going to receive
+	Sender     string `json:"sender"`   // the sender
+	Receiver   string `json:"receiver"` // the receiver
+	Body       string `json:"body"`     // the body
+	ExcludeOne string `json:"-"`        // if a connection should be excluded for the message
+	// common properties
+	Connections []string `json:"connections"` //the people connected.
 }
 
-type Conn struct {
-	Nick       string
-	Connection net.Conn
-	Wait       chan struct{}
-}
-
-func NewConn(connection net.Conn) *Conn {
-	return &Conn{
-		Connection: connection,
-		Wait:       make(chan struct{}),
+func (m *Message) Build() (string, error) {
+	b, err := json.Marshal(m)
+	if err != nil {
+		log.Error().Msgf("cannot marshall msg %s", err.Error())
+		return "", err
 	}
+
+	return string(b), nil
 }
 
 func NewChatServer(port string) *ChatServer {
@@ -64,8 +64,9 @@ func (server *ChatServer) Run() {
 			go func() {
 				server.Input <- Message{
 					Type:   msgTypeBroadcast,
-					Sender: conn.Nick,
-					Text:   fmt.Sprintf("%s joined Fleur channel", conn.Nick),
+					Sender: systemSender,
+					ExcludeOne: conn.Nick,
+					Body:   fmt.Sprintf("%s joined Fleur channel", conn.Nick),
 				}
 			}()
 		// When a user leaves the server, send a message to everyone.
@@ -73,8 +74,9 @@ func (server *ChatServer) Run() {
 			go func() {
 				server.Input <- Message{
 					Type:   msgTypeBroadcast,
-					Sender: conn.Nick,
-					Text:   fmt.Sprintf("%s left Fleur channel", conn.Nick),
+					Sender: systemSender,
+					ExcludeOne: conn.Nick,
+					Body:   fmt.Sprintf("%s left Fleur channel", conn.Nick),
 				}
 			}()
 		case msg := <-server.Input:
@@ -82,17 +84,21 @@ func (server *ChatServer) Run() {
 			switch t {
 			case msgTypeBroadcast:
 				for k, v := range server.ActiveConnections {
-					if k != msg.Sender {
-						WriteMessage(v.Connection, "", msg.Text)
+					if k != msg.ExcludeOne {
+						WriteMessage(v.Connection, msg.Build)
 					}
 				}
 			case msgTypeDirect:
-				receiver := server.ActiveConnections[msg.Receiver]
+				receiver := server.GetConnection(msg.Receiver)
 				// prevent send message to a non-connected user
 				if receiver != nil {
-					WriteMessage(receiver.Connection, msg.Sender, msg.Text)
+					WriteMessage(receiver.Connection, msg.Build)
 				}
-
+			case msgTypeSelf:
+				receiver := server.GetConnection(msg.Receiver)
+				if receiver != nil {
+					WriteMessage(receiver.Connection, msg.Build)
+				}
 			}
 		}
 	}
@@ -104,11 +110,18 @@ func (server *ChatServer) HandleConnection(c *Conn) {
 		for {
 			WritePrompt(c.Connection, "Enter your nick: ")
 			scanner.Scan()
-			c.Nick = scanner.Text()
-			if !server.IsValidNickname(c.Nick) {
+			nick := scanner.Text()
+			c.Nick = nick
+			if !server.IsValidNickname(nick) {
 				break
 			}
-			// TODO send all the information about the server to the current connection
+			server.Input <- Message{
+				Type:        msgTypeSelf,
+				Sender:      systemSender,
+				Receiver:    nick,
+				Body:        "welcome " + nick,
+				Connections: server.GetConnections(),
+			}
 		}
 
 		// Emit a new join event.
@@ -135,8 +148,13 @@ func (server *ChatServer) HandleConnection(c *Conn) {
 	}
 }
 
-func WriteMessage(w io.Writer, sender, msg string) {
-	write(w, sender+"> "+msg+"\n")
+func WriteMessage(w io.Writer, f func() (string, error)) {
+	msg, err := f()
+	if err != nil {
+		return
+	}
+
+	write(w, msg)
 }
 
 func WritePrompt(w io.Writer, msg string) {

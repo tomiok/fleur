@@ -8,6 +8,10 @@ import (
 const (
 	msgTypeDirect    = "MESSAGE_DIRECT"
 	msgTypeBroadcast = "BROADCAST"
+	msgTypeSelf      = "SELF"
+
+	// sender type
+	systemSender = "SYSTEM"
 )
 
 type TCPServer struct {
