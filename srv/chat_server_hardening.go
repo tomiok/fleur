@@ -3,12 +3,19 @@ package srv
 import (
 	"errors"
 	"github.com/rs/zerolog/log"
+	"net"
 	"strings"
 )
 
 func (server *ChatServer) CloseConnection(c *Conn) {
 	delete(server.ActiveConnections, c.Nick)
-	err := c.Connection.Close()
+	err := c.Connection.(*net.TCPConn).SetLinger(0)
+
+	if err != nil {
+		log.Warn().Msgf("cannot clone connection %s", err.Error())
+	}
+	
+	err = c.Connection.Close()
 
 	if err != nil {
 		log.Warn().Msgf("cannot clone connection %s", err.Error())
@@ -44,9 +51,11 @@ func (server *ChatServer) IsValidNickname(nick string) bool {
 	return b
 }
 
+// GetConnections is a helper method to return the active connections
+//todo skip self connections
 func (server *ChatServer) GetConnections() []string {
 	actives := server.ActiveConnections
-	connections := make([]string, len(actives))
+	connections := make([]string, 0)
 
 	for k := range actives {
 		connections = append(connections, k)
@@ -55,6 +64,6 @@ func (server *ChatServer) GetConnections() []string {
 	return connections
 }
 
-func (server *ChatServer) GetConnection(nick string) *Conn{
+func (server *ChatServer) GetConnection(nick string) *Conn {
 	return server.ActiveConnections[nick]
 }

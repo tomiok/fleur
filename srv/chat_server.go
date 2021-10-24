@@ -65,10 +65,11 @@ func (server *ChatServer) Run() {
 			server.AddUser(conn)
 			go func() {
 				server.Input <- Message{
-					Type:       msgTypeBroadcast,
-					Sender:     systemSender,
-					ExcludeOne: conn.Nick,
-					Body:       fmt.Sprintf("%s joined Fleur channel", conn.Nick),
+					Type:        msgTypeBroadcast,
+					Sender:      systemSender,
+					ExcludeOne:  conn.Nick,
+					Body:        fmt.Sprintf("%s joined Fleur channel", conn.Nick),
+					Connections: server.GetConnections(),
 				}
 			}()
 		// When a user leaves the server, send a message to everyone.
