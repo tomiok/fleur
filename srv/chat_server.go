@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/rs/zerolog/log"
 	"io"
+	"time"
 )
 
 // ChatServer is the main structure that holds all the necessary information for the tcp and web server
@@ -139,6 +140,10 @@ func (server *ChatServer) HandleConnection(c *Conn) {
 
 				// write to receiver(s)
 				server.Input <- msg
+
+				// reset
+				c.Limiter.N = c.MaxReadLength
+				_ = c.Connection.SetReadDeadline(time.Now().Add(c.ReadWriteTimeout))
 			}
 			// tidy up
 			server.CloseConnection(c)

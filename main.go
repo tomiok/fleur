@@ -21,6 +21,7 @@ func main() {
 			log.Error().Msgf("cannot accept connections. %s", err.Error())
 			os.Exit(1)
 		}
+
 		go cs.HandleConnection(srv.NewConn(conn))
 	}
 }
