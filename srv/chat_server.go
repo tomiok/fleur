@@ -51,6 +51,7 @@ func NewChatServer(port string) *ChatServer {
 }
 
 func (server *ChatServer) AddUser(c *Conn) {
+	log.Info().Msgf("user added, %s", c.Nick)
 	server.ActiveConnections[c.Nick] = c
 }
 
