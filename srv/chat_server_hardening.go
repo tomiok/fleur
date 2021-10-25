@@ -7,14 +7,14 @@ import (
 	"strings"
 )
 
-func (server *ChatServer) CloseConnection(c *Conn) {
+func (server *ChatServer) CloseTCPConnection(c *Conn) {
 	delete(server.ActiveConnections, c.Nick)
 	err := c.Connection.(*net.TCPConn).SetLinger(0)
 
 	if err != nil {
 		log.Warn().Msgf("cannot clone connection %s", err.Error())
 	}
-	
+
 	err = c.Connection.Close()
 
 	if err != nil {

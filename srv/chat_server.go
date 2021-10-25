@@ -107,9 +107,9 @@ func (server *ChatServer) Run() {
 	}
 }
 
-func (server *ChatServer) HandleConnection(c *Conn) {
+func (server *ChatServer) HandleTCPConnection(c *Conn) {
 	for {
-		scanner := bufio.NewScanner(c.Connection)
+		scanner := bufio.NewScanner(c.Limiter)
 		for {
 			WritePrompt(c.Connection, "Enter your nick: ")
 			scanner.Scan()
@@ -148,7 +148,7 @@ func (server *ChatServer) HandleConnection(c *Conn) {
 				_ = c.Connection.SetReadDeadline(time.Now().Add(c.ReadWriteTimeout))
 			}
 			// tidy up
-			server.CloseConnection(c)
+			server.CloseTCPConnection(c)
 		}()
 
 		// Wait for it.

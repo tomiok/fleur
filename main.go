@@ -22,6 +22,6 @@ func main() {
 			os.Exit(1)
 		}
 
-		go cs.HandleConnection(srv.NewConn(conn))
+		go cs.HandleTCPConnection(srv.NewConn(conn))
 	}
 }

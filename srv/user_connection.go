@@ -8,15 +8,15 @@ import (
 
 const (
 	MaxReadLength    = 1024
-	ReadWriteTimeout = time.Minute
+	ReadWriteTimeout = time.Hour
 )
 
 type Conn struct {
-	Nick          string
-	Connection    net.Conn
-	Wait          chan struct{}
-	Limiter       *io.LimitedReader
-	MaxReadLength int64
+	Nick             string
+	Connection       net.Conn
+	Wait             chan struct{}
+	Limiter          *io.LimitedReader
+	MaxReadLength    int64
 	ReadWriteTimeout time.Duration
 }
 
@@ -27,10 +27,10 @@ func NewConn(conn net.Conn) *Conn {
 		N: MaxReadLength,
 	}
 	return &Conn{
-		Connection:    conn,
-		Wait:          make(chan struct{}),
-		Limiter:       limiter,
-		MaxReadLength: MaxReadLength,
+		Connection:       conn,
+		Wait:             make(chan struct{}),
+		Limiter:          limiter,
+		MaxReadLength:    MaxReadLength,
 		ReadWriteTimeout: ReadWriteTimeout,
 	}
 }
