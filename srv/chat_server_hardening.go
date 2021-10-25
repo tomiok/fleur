@@ -51,9 +51,8 @@ func (server *ChatServer) IsValidNickname(nick string) bool {
 	return b
 }
 
-// GetConnections is a helper method to return the active connections
-//todo skip self connections
-func (server *ChatServer) GetConnections() []string {
+// GetActiveConnections is a helper method to return the active connections
+func (server *ChatServer) GetActiveConnections() []string {
 	actives := server.ActiveConnections
 	connections := make([]string, 0)
 

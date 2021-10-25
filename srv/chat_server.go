@@ -10,15 +10,15 @@ import (
 )
 
 // ChatServer is the main structure that holds all the necessary information for the tcp and web server
-// TODO add stats for connections and messages
 type ChatServer struct {
 	ActiveConnections map[string]*Conn
-	TCPSrv            *TCPServer
+	TCPServer         *TCPServer
 	Join              chan *Conn
 	Leave             chan *Conn
 	Input             chan Message
 }
 
+// Message is the main structure to communicate connections
 type Message struct {
 	// message properties
 	Type       string `json:"type"`     // define which type of message is, and who is going to receive
@@ -43,7 +43,7 @@ func (m *Message) Build() (string, error) {
 func NewChatServer(port string) *ChatServer {
 	return &ChatServer{
 		ActiveConnections: make(map[string]*Conn),
-		TCPSrv:            NewServer(port),
+		TCPServer:         NewServer(port),
 		Join:              make(chan *Conn),
 		Leave:             make(chan *Conn),
 		Input:             make(chan Message),
@@ -69,7 +69,7 @@ func (server *ChatServer) Run() {
 					Sender:      systemSender,
 					ExcludeOne:  conn.Nick,
 					Body:        fmt.Sprintf("%s joined Fleur channel", conn.Nick),
-					Connections: server.GetConnections(),
+					Connections: server.GetActiveConnections(),
 				}
 			}()
 		// When a user leaves the server, send a message to everyone.
@@ -128,7 +128,7 @@ func (server *ChatServer) HandleTCPConnection(c *Conn) {
 			Sender:      systemSender,
 			Receiver:    c.Nick,
 			Body:        "welcome " + c.Nick,
-			Connections: server.GetConnections(),
+			Connections: server.GetActiveConnections(),
 		}
 
 		// Read and write the message. Lookup the receiver.
@@ -136,6 +136,7 @@ func (server *ChatServer) HandleTCPConnection(c *Conn) {
 			for scanner.Scan() {
 				text := scanner.Text()
 				msg, err := parse(c.Nick, text, directMsgParser)
+				msg.Connections = server.GetActiveConnections()
 				if err != nil {
 					continue
 				}

@@ -16,7 +16,7 @@ func main() {
 	go cs.Run()
 
 	for {
-		conn, err := cs.TCPSrv.Listener.Accept()
+		conn, err := cs.TCPServer.Listener.Accept()
 		if err != nil {
 			log.Error().Msgf("cannot accept connections. %s", err.Error())
 			os.Exit(1)
