@@ -1,19 +1,27 @@
 package main
 
 import (
-	"github.com/google/uuid"
+	"github.com/ohchat-io/fleur/config"
 	"github.com/ohchat-io/fleur/srv"
+	"github.com/rs/zerolog/log"
+	"os"
 )
 
 func main() {
-	s := srv.NewServer("5566")
+	conf := config.Bind()
+	conf.PrintConfigs()
+
+	cs := srv.NewChatServer(conf.Port)
+
+	go cs.Run()
 
 	for {
-		conn, _ := s.L.Accept()
-		c := &srv.Conn{
-			ID: uuid.NewString(),
-			C:  conn,
+		conn, err := cs.TCPServer.Listener.Accept()
+		if err != nil {
+			log.Error().Msgf("cannot accept connections. %s", err.Error())
+			os.Exit(1)
 		}
-		go srv.HandleConnection(c)
+
+		go cs.HandleTCPConnection(srv.NewConn(conn))
 	}
 }

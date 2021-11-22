@@ -1,46 +1,34 @@
 package srv
 
 import (
-	"bufio"
-	"fmt"
+	"log"
 	"net"
-	"strings"
 )
 
-type Hub struct {
-}
+const (
+	msgTypeDirect    = "MESSAGE_DIRECT"
+	msgTypeBroadcast = "BROADCAST"
+	msgTypeSelf      = "SELF"
+
+	// sender type
+	systemSender = "SYSTEM"
+)
 
 type TCPServer struct {
-	addr string
-	L    net.Listener
+	addr     string
+	Listener net.Listener
 }
 
 func NewServer(addr string) *TCPServer {
 	l, err := net.Listen("tcp4", ":"+addr)
+
 	if err != nil {
-		panic(err.Error())
+		log.Fatalf("cannot create listener for tcp4 connection, %s", err.Error())
+		return nil
 	}
+
 	return &TCPServer{
-		addr: addr,
-		L:    l,
+		addr:     addr,
+		Listener: l,
 	}
-}
-
-func HandleConnection(c *Conn) {
-	for {
-		msg, err := bufio.NewReader(c.C).ReadString('\n')
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-
-		temp := strings.TrimSpace(msg)
-
-		if temp == "STOP" {
-			break
-		}
-		fmt.Println(c.ID + "> " + temp)
-
-	}
-	_ = c.C.Close()
 }
